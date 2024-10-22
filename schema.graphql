@@ -12,6 +12,7 @@ type Datadisks_Transfer {
   from: String!
   to: String!
   tokenId: BigInt!
+  contractIndex: Int!
 }
 
 type Handbooks_Transfer {
@@ -20,4 +21,12 @@ type Handbooks_Transfer {
   from: String!
   to: String!
   tokenId: BigInt!
+  contractIndex: Int!
+}
+
+type OwnerAssets {
+  id: ID!
+  badges: [BigInt!]!
+  datadisks: [Int!]!
+  handbooks: [Int!]!
 }
