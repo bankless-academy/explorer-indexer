@@ -27,16 +27,19 @@ const handbooksAddresses = [
   '0xd94ecc2f45d7346975f2437c789b3e2e32c397ca'
 ];
 
-function getContractIndex(address: string, contractList: string[]): number {
+function getContractIndex(address: string, contractList: string[]): string {
   const index = contractList.findIndex(a => a.toLowerCase() === address.toLowerCase());
-  return index !== -1 ? index + 1 : 0;
+  if (index === -1) return '';
+  const prefix = contractList === datadisksAddresses ? 'D' : 'H';
+  return `${prefix}${(index + 1).toString().padStart(3, '0')}`;
 }
 
-async function updateOwnerAssets(context: any, address: string, assetType: 'badges' | 'datadisks' | 'handbooks', assetId: number | BigInt, isAdd: boolean) {
+async function updateOwnerAssets(context: any, address: string, assetType: 'badges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
   let ownerAssets = await context.OwnerAssets.get(address);
   if (!ownerAssets) {
     ownerAssets = {
       id: address,
+      address: address,
       badges: [],
       datadisks: [],
       handbooks: [],
@@ -45,18 +48,26 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
 
   const assetArray = ownerAssets[assetType];
   const assetIdString = assetId.toString();
-  const assetIndex = assetArray.findIndex((id: number | BigInt) => id.toString() === assetIdString);
 
-  if (isAdd && assetIndex === -1) {
-    assetArray.push(assetId);
-  } else if (!isAdd && assetIndex !== -1) {
-    assetArray.splice(assetIndex, 1);
+  if (isAdd) {
+    assetArray.push(assetIdString);
+  } else {
+    const assetIndex = assetArray.indexOf(assetIdString);
+    if (assetIndex !== -1) {
+      assetArray.splice(assetIndex, 1);
+    }
   }
 
-  context.OwnerAssets.set(ownerAssets);
+  // Ensure badges are BigInt, while datadisks and handbooks remain as strings
+  ownerAssets.badges = ownerAssets.badges.map((id: string | number) => BigInt(id));
+  ownerAssets.datadisks = ownerAssets.datadisks.map((id: string) => id);
+  ownerAssets.handbooks = ownerAssets.handbooks.map((id: string) => id);
+
+  await context.OwnerAssets.set(ownerAssets);
 }
 
 PolBadges.TransferSingle.handler(async ({ event, context }) => {
+  // console.log("PolBadges TransferSingle event received:", event);
   const entity: PolBadges_TransferSingle = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
     operator: event.params.operator,
@@ -73,6 +84,7 @@ PolBadges.TransferSingle.handler(async ({ event, context }) => {
 });
 
 Datadisks.Transfer.handler(async ({ event, context }) => {
+  console.log("Datadisks Transfer event received:", event);
   const contractIndex = getContractIndex(event.srcAddress, datadisksAddresses);
   const entity: Datadisks_Transfer = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
@@ -82,13 +94,14 @@ Datadisks.Transfer.handler(async ({ event, context }) => {
     contractIndex: contractIndex,
   };
 
-  context.Datadisks_Transfer.set(entity);
+  await context.Datadisks_Transfer.set(entity);
 
   await updateOwnerAssets(context, event.params.from, 'datadisks', contractIndex, false);
   await updateOwnerAssets(context, event.params.to, 'datadisks', contractIndex, true);
 });
 
 Handbooks.Transfer.handler(async ({ event, context }) => {
+  console.log("Handbooks Transfer event received:", event);
   const contractIndex = getContractIndex(event.srcAddress, handbooksAddresses);
   const entity: Handbooks_Transfer = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
@@ -99,7 +112,7 @@ Handbooks.Transfer.handler(async ({ event, context }) => {
     contractIndex: contractIndex,
   };
 
-  context.Handbooks_Transfer.set(entity);
+  await context.Handbooks_Transfer.set(entity);
 
   await updateOwnerAssets(context, event.params.from, 'handbooks', contractIndex, false);
   await updateOwnerAssets(context, event.params.to, 'handbooks', contractIndex, true);
