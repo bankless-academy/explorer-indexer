@@ -17,10 +17,9 @@ type Datadisks_Transfer {
 
 type Handbooks_Transfer {
   id: ID!
-  clone: String!
   from: String!
   to: String!
-  tokenId: BigInt!
+  value: BigInt!
   contractIndex: String!
 }
 

@@ -1,6 +1,3 @@
-/*
- * Please refer to https://docs.envio.dev for a thorough guide on all Envio indexer features
- */
 import {
   PolBadges,
   PolBadges_TransferSingle,
@@ -35,6 +32,8 @@ function getContractIndex(address: string, contractList: string[]): string {
 }
 
 async function updateOwnerAssets(context: any, address: string, assetType: 'badges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
+  if (!address) return;
+
   let ownerAssets = await context.OwnerAssets.get(address);
   if (!ownerAssets) {
     ownerAssets = {
@@ -58,7 +57,6 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
     }
   }
 
-  // Ensure badges are BigInt, while datadisks and handbooks remain as strings
   ownerAssets.badges = ownerAssets.badges.map((id: string | number) => BigInt(id));
   ownerAssets.datadisks = ownerAssets.datadisks.map((id: string) => id);
   ownerAssets.handbooks = ownerAssets.handbooks.map((id: string) => id);
@@ -67,7 +65,6 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
 }
 
 PolBadges.TransferSingle.handler(async ({ event, context }) => {
-  // console.log("PolBadges TransferSingle event received:", event);
   const entity: PolBadges_TransferSingle = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
     operator: event.params.operator,
@@ -83,37 +80,35 @@ PolBadges.TransferSingle.handler(async ({ event, context }) => {
   await updateOwnerAssets(context, event.params.to, 'badges', event.params.id, true);
 });
 
-Datadisks.Transfer.handler(async ({ event, context }) => {
-  console.log("Datadisks Transfer event received:", event);
-  const contractIndex = getContractIndex(event.srcAddress, datadisksAddresses);
-  const entity: Datadisks_Transfer = {
-    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
-    from: event.params.from,
-    to: event.params.to,
-    tokenId: event.params.tokenId,
-    contractIndex: contractIndex,
-  };
+const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
+  const isDatadisk = datadisksAddresses.includes(event.srcAddress);
+  const contractList = isDatadisk ? datadisksAddresses : handbooksAddresses;
+  const contractIndex = getContractIndex(event.srcAddress, contractList);
+  const assetType = isDatadisk ? 'datadisks' : 'handbooks';
 
-  await context.Datadisks_Transfer.set(entity);
+  const entity = isDatadisk
+    ? {
+      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+      from: event.params.from,
+      to: event.params.to,
+      tokenId: event.params.tokenId.toString(),
+      contractIndex: contractIndex,
+    } as Datadisks_Transfer
+    : {
+      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+      from: event.params.from,
+      to: event.params.to,
+      value: event.params.tokenId.toString(),
+      contractIndex: contractIndex,
+    } as Handbooks_Transfer;
 
-  await updateOwnerAssets(context, event.params.from, 'datadisks', contractIndex, false);
-  await updateOwnerAssets(context, event.params.to, 'datadisks', contractIndex, true);
-});
+  await (isDatadisk ? context.Datadisks_Transfer.set(entity) : context.Handbooks_Transfer.set(entity));
 
-Handbooks.Transfer.handler(async ({ event, context }) => {
-  console.log("Handbooks Transfer event received:", event);
-  const contractIndex = getContractIndex(event.srcAddress, handbooksAddresses);
-  const entity: Handbooks_Transfer = {
-    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
-    clone: event.params.clone,
-    from: event.params.from,
-    to: event.params.to,
-    tokenId: event.params.tokenId,
-    contractIndex: contractIndex,
-  };
+  if (event.params.from !== '0x0000000000000000000000000000000000000000') {
+    await updateOwnerAssets(context, event.params.from, assetType, contractIndex, false);
+  }
+  await updateOwnerAssets(context, event.params.to, assetType, contractIndex, true);
+};
 
-  await context.Handbooks_Transfer.set(entity);
-
-  await updateOwnerAssets(context, event.params.from, 'handbooks', contractIndex, false);
-  await updateOwnerAssets(context, event.params.to, 'handbooks', contractIndex, true);
-});
+Datadisks.Transfer.handler(handleTransfer);
+Handbooks.Transfer.handler(handleTransfer);
