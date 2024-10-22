@@ -1,0 +1,23 @@
+type PolBadges_TransferSingle {
+  id: ID!
+  operator: String!
+  from: String!
+  to: String!
+  event_id: BigInt!
+  value: BigInt!
+}
+
+type Datadisks_Transfer {
+  id: ID!
+  from: String!
+  to: String!
+  tokenId: BigInt!
+}
+
+type Handbooks_Transfer {
+  id: ID!
+  clone: String!
+  from: String!
+  to: String!
+  tokenId: BigInt!
+}
