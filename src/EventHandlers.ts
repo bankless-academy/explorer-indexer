@@ -42,6 +42,7 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
       badges: [],
       datadisks: [],
       handbooks: [],
+      score: 0,
     };
   }
 
@@ -50,10 +51,12 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
 
   if (isAdd) {
     assetArray.push(assetIdString);
+    ownerAssets.score += assetType === 'badges' ? 1 : assetType === 'handbooks' ? 1 : 3;
   } else {
     const assetIndex = assetArray.indexOf(assetIdString);
     if (assetIndex !== -1) {
       assetArray.splice(assetIndex, 1);
+      ownerAssets.score -= assetType === 'badges' ? 1 : assetType === 'handbooks' ? 1 : 3;
     }
   }
 
