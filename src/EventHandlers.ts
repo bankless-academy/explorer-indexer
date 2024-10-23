@@ -31,7 +31,7 @@ function getContractIndex(address: string, contractList: string[]): string {
   return `${prefix}${(index + 1).toString().padStart(3, '0')}`;
 }
 
-async function updateOwnerAssets(context: any, address: string, assetType: 'badges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
+async function updateOwnerAssets(context: any, address: string, assetType: 'polBadges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
   if (!address) return;
 
   let ownerAssets = await context.OwnerAssets.get(address);
@@ -39,10 +39,9 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
     ownerAssets = {
       id: address,
       address: address,
-      badges: [],
+      polBadges: [],
       datadisks: [],
       handbooks: [],
-      score: 0,
     };
   }
 
@@ -51,16 +50,14 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'badg
 
   if (isAdd) {
     assetArray.push(assetIdString);
-    ownerAssets.score += assetType === 'badges' ? 1 : assetType === 'handbooks' ? 1 : 3;
   } else {
     const assetIndex = assetArray.indexOf(assetIdString);
     if (assetIndex !== -1) {
       assetArray.splice(assetIndex, 1);
-      ownerAssets.score -= assetType === 'badges' ? 1 : assetType === 'handbooks' ? 1 : 3;
     }
   }
 
-  ownerAssets.badges = ownerAssets.badges.map((id: string | number) => BigInt(id));
+  ownerAssets.polBadges = ownerAssets.polBadges.map((id: string | number) => BigInt(id));
   ownerAssets.datadisks = ownerAssets.datadisks.map((id: string) => id);
   ownerAssets.handbooks = ownerAssets.handbooks.map((id: string) => id);
 
@@ -79,8 +76,8 @@ PolBadges.TransferSingle.handler(async ({ event, context }) => {
 
   context.PolBadges_TransferSingle.set(entity);
 
-  await updateOwnerAssets(context, event.params.from, 'badges', event.params.id, false);
-  await updateOwnerAssets(context, event.params.to, 'badges', event.params.id, true);
+  await updateOwnerAssets(context, event.params.from, 'polBadges', event.params.id, false);
+  await updateOwnerAssets(context, event.params.to, 'polBadges', event.params.id, true);
 });
 
 const handleTransfer = async ({ event, context }: { event: any; context: any }) => {

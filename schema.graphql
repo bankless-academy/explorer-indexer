@@ -26,8 +26,7 @@ type Handbooks_Transfer {
 type OwnerAssets {
   id: ID!
   address: String!
-  badges: [BigInt!]!
+  polBadges: [BigInt!]!
   datadisks: [String!]!
   handbooks: [String!]!
-  score: Int!
 }
