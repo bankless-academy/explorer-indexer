@@ -24,6 +24,12 @@ const handbooksAddresses = [
   '0xd94ecc2f45d7346975f2437c789b3e2e32c397ca'
 ];
 
+const scorePerType = {
+  polBadges: 1,
+  datadisks: 1,
+  handbooks: 3,
+};
+
 function getContractIndex(address: string, contractList: string[]): string {
   const index = contractList.findIndex(a => a.toLowerCase() === address.toLowerCase());
   if (index === -1) return '';
@@ -42,6 +48,7 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
       polBadges: [],
       datadisks: [],
       handbooks: [],
+      score: 0,
     };
   }
 
@@ -50,10 +57,12 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
 
   if (isAdd) {
     assetArray.push(assetIdString);
+    ownerAssets.score += scorePerType[assetType];
   } else {
     const assetIndex = assetArray.indexOf(assetIdString);
     if (assetIndex !== -1) {
       assetArray.splice(assetIndex, 1);
+      ownerAssets.score -= scorePerType[assetType];
     }
   }
 

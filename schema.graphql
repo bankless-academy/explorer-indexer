@@ -29,4 +29,5 @@ type OwnerAssets {
   polBadges: [BigInt!]!
   datadisks: [String!]!
   handbooks: [String!]!
+  score: Int!
 }
