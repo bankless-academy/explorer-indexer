@@ -7,6 +7,15 @@ type PolBadges_TransferSingle {
   value: BigInt!
 }
 
+type BaseBadges_TransferSingle {
+  id: ID!
+  operator: String!
+  from: String!
+  to: String!
+  event_id: BigInt!
+  value: BigInt!
+}
+
 type Datadisks_Transfer {
   id: ID!
   from: String!
@@ -27,6 +36,7 @@ type OwnerAssets {
   id: ID!
   address: String!
   polBadges: [BigInt!]!
+  baseBadges: [BigInt!]!
   datadisks: [String!]!
   handbooks: [String!]!
   score: Int!

@@ -5,6 +5,8 @@ import {
   Datadisks_Transfer,
   Handbooks,
   Handbooks_Transfer,
+  BaseBadges,
+  BaseBadges_TransferSingle,
 } from "generated";
 
 const datadisksAddresses = [
@@ -26,6 +28,7 @@ const handbooksAddresses = [
 
 const scorePerType = {
   polBadges: 1,
+  baseBadges: 1,
   datadisks: 1,
   handbooks: 3,
 };
@@ -37,7 +40,7 @@ function getContractIndex(address: string, contractList: string[]): string {
   return `${prefix}${(index + 1).toString().padStart(3, '0')}`;
 }
 
-async function updateOwnerAssets(context: any, address: string, assetType: 'polBadges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
+async function updateOwnerAssets(context: any, address: string, assetType: 'polBadges' | 'baseBadges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
   if (!address) return;
 
   let ownerAssets = await context.OwnerAssets.get(address);
@@ -46,6 +49,7 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
       id: address,
       address: address,
       polBadges: [],
+      baseBadges: [],
       datadisks: [],
       handbooks: [],
       score: 0,
@@ -56,8 +60,12 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
   const assetIdString = assetId.toString();
 
   if (isAdd) {
-    assetArray.push(assetIdString);
-    ownerAssets.score += scorePerType[assetType];
+    if (assetType === 'baseBadges' && assetArray.includes(BigInt(assetIdString))) {
+      // do nothing if the base badge is already in the array
+    } else {
+      assetArray.push(assetIdString);
+      ownerAssets.score += scorePerType[assetType];
+    }
   } else {
     const assetIndex = assetArray.indexOf(assetIdString);
     if (assetIndex !== -1) {
@@ -67,6 +75,7 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
   }
 
   ownerAssets.polBadges = ownerAssets.polBadges.map((id: string | number) => BigInt(id));
+  ownerAssets.baseBadges = ownerAssets.baseBadges.map((id: string | number) => BigInt(id));
   ownerAssets.datadisks = ownerAssets.datadisks.map((id: string) => id);
   ownerAssets.handbooks = ownerAssets.handbooks.map((id: string) => id);
 
@@ -85,8 +94,27 @@ PolBadges.TransferSingle.handler(async ({ event, context }) => {
 
   context.PolBadges_TransferSingle.set(entity);
 
-  await updateOwnerAssets(context, event.params.from, 'polBadges', event.params.id, false);
+  // await updateOwnerAssets(context, event.params.from, 'polBadges', event.params.id, false);
   await updateOwnerAssets(context, event.params.to, 'polBadges', event.params.id, true);
+});
+
+BaseBadges.TransferSingle.handler(async ({ event, context }) => {
+  const entity: BaseBadges_TransferSingle = {
+    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+    operator: event.params.operator,
+    from: event.params.from,
+    to: event.params.to,
+    event_id: event.params.id,
+    value: event.params.value,
+  };
+
+  context.BaseBadges_TransferSingle.set(entity);
+
+  // only handle the transfer done by the bankless academy minter account
+  if (event.params.from === '0x0000000000000000000000000000000000000000' && event.params.operator?.toLowerCase() === '0x472A74C4F7e281e590Bed861daa66721A6ACADBC'.toLowerCase()) {
+    // await updateOwnerAssets(context, event.params.from, 'baseBadges', event.params.id, false);
+    await updateOwnerAssets(context, event.params.to, 'baseBadges', event.params.id, true);
+  }
 });
 
 const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
