@@ -43,4 +43,8 @@ networks:
     handler: src/EventHandlers.ts
     events:
     - event: TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)
+    # TODO: add field selection for operator
+    # field_selection:
+    #   transaction_fields:
+    #     - "operator"
 rollback_on_reorg: false
