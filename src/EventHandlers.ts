@@ -56,24 +56,33 @@ async function updateOwnerAssets(
     ownerAssets = {
       id: address,
       address: address,
+      badges: [],
       polBadges: [],
       baseBadges: [],
       kudosBadges: [],
       datadisks: [],
       handbooks: [],
       score: 0,
+      lessonsCompleted: 0,
     };
   }
 
   const assetArray = ownerAssets[assetType];
   const assetIdString = assetId.toString();
 
+  const isBadge = ['polBadges', 'baseBadges', 'kudosBadges'].includes(assetType);
+
   if (isAdd) {
-    if ((assetType === 'baseBadges' || assetType === 'kudosBadges') && assetArray.includes(BigInt(assetIdString))) {
-    // do nothing if the badge is already in the array
+    if (isBadge && ownerAssets.badges.includes(BigInt(assetIdString))) {
+      // don't update score or lessonsCompleted if the badge is already in the array
+      assetArray.push(assetIdString);
     } else {
       assetArray.push(assetIdString);
       ownerAssets.score += scorePerType[assetType];
+      if (isBadge) {
+        ownerAssets.lessonsCompleted += 1;
+        ownerAssets.badges.push(assetIdString);
+      }
     }
   } else {
     const assetIndex = assetArray.indexOf(assetIdString);
@@ -83,6 +92,7 @@ async function updateOwnerAssets(
     }
   }
 
+  ownerAssets.badges = ownerAssets.badges.map((id: string | number) => BigInt(id));
   ownerAssets.polBadges = ownerAssets.polBadges.map((id: string | number) => BigInt(id));
   ownerAssets.baseBadges = ownerAssets.baseBadges.map((id: string | number) => BigInt(id));
   ownerAssets.kudosBadges = ownerAssets.kudosBadges.map((id: string | number) => BigInt(id));
@@ -139,6 +149,7 @@ BaseBadges.TransferSingle.handler(async ({ event, context }) => {
 });
 
 const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
+  // HACK: simulate init event
   if (event.block.number === 56350237) {
     console.log('first datadisk transfer, also import kudos badges');
     await importKudosBadges(context);
