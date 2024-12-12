@@ -8,6 +8,7 @@ import {
   BaseBadges,
   BaseBadges_TransferSingle,
 } from "generated";
+import kudosBadges from './badges.json';
 
 const datadisksAddresses = [
   '0x5ce61b80931Ea67565f0532965DDe5be2d41331d',
@@ -29,6 +30,7 @@ const handbooksAddresses = [
 const scorePerType = {
   polBadges: 1,
   baseBadges: 1,
+  kudosBadges: 1,
   datadisks: 1,
   handbooks: 3,
 };
@@ -40,7 +42,13 @@ function getContractIndex(address: string, contractList: string[]): string {
   return `${prefix}${(index + 1).toString().padStart(3, '0')}`;
 }
 
-async function updateOwnerAssets(context: any, address: string, assetType: 'polBadges' | 'baseBadges' | 'datadisks' | 'handbooks', assetId: string | BigInt, isAdd: boolean) {
+async function updateOwnerAssets(
+  context: any,
+  address: string,
+  assetType: 'polBadges' | 'baseBadges' | 'kudosBadges' | 'datadisks' | 'handbooks',
+  assetId: string | BigInt,
+  isAdd: boolean
+) {
   if (!address) return;
 
   let ownerAssets = await context.OwnerAssets.get(address);
@@ -50,6 +58,7 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
       address: address,
       polBadges: [],
       baseBadges: [],
+      kudosBadges: [],
       datadisks: [],
       handbooks: [],
       score: 0,
@@ -60,8 +69,8 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
   const assetIdString = assetId.toString();
 
   if (isAdd) {
-    if (assetType === 'baseBadges' && assetArray.includes(BigInt(assetIdString))) {
-      // do nothing if the base badge is already in the array
+    if ((assetType === 'baseBadges' || assetType === 'kudosBadges') && assetArray.includes(BigInt(assetIdString))) {
+    // do nothing if the badge is already in the array
     } else {
       assetArray.push(assetIdString);
       ownerAssets.score += scorePerType[assetType];
@@ -76,10 +85,22 @@ async function updateOwnerAssets(context: any, address: string, assetType: 'polB
 
   ownerAssets.polBadges = ownerAssets.polBadges.map((id: string | number) => BigInt(id));
   ownerAssets.baseBadges = ownerAssets.baseBadges.map((id: string | number) => BigInt(id));
+  ownerAssets.kudosBadges = ownerAssets.kudosBadges.map((id: string | number) => BigInt(id));
   ownerAssets.datadisks = ownerAssets.datadisks.map((id: string) => id);
   ownerAssets.handbooks = ownerAssets.handbooks.map((id: string) => id);
 
   await context.OwnerAssets.set(ownerAssets);
+}
+
+// Import kudos badges on startup
+async function importKudosBadges(context: any) {
+  console.log('Importing kudos badges...');
+  for (const [address, badges] of Object.entries(kudosBadges)) {
+    for (const badgeId of badges as number[]) {
+      await updateOwnerAssets(context, address.toLowerCase(), 'kudosBadges', BigInt(badgeId), true);
+    }
+  }
+  console.log('Kudos badges import completed');
 }
 
 PolBadges.TransferSingle.handler(async ({ event, context }) => {
@@ -118,6 +139,11 @@ BaseBadges.TransferSingle.handler(async ({ event, context }) => {
 });
 
 const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
+  if (event.block.number === 56350237) {
+    console.log('first datadisk transfer, also import kudos badges');
+    await importKudosBadges(context);
+  }
+
   const isDatadisk = datadisksAddresses.includes(event.srcAddress);
   const contractList = isDatadisk ? datadisksAddresses : handbooksAddresses;
   const contractIndex = getContractIndex(event.srcAddress, contractList);

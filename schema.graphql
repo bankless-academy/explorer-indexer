@@ -37,6 +37,7 @@ type OwnerAssets {
   address: String!
   polBadges: [BigInt!]!
   baseBadges: [BigInt!]!
+  kudosBadges: [BigInt!]!
   datadisks: [String!]!
   handbooks: [String!]!
   score: Int!
