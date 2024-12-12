@@ -39,7 +39,7 @@ networks:
   contracts:
   - name: BaseBadges
     address:
-    - 0x0BC0599049eedfDEE459C12692aC1063eCA932a6
+    - 0xfc902e91affd9dd02df4c1e57dac7b096512f286
     handler: src/EventHandlers.ts
     events:
     - event: TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)
