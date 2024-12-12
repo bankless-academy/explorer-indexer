@@ -50,12 +50,13 @@ async function updateOwnerAssets(
   isAdd: boolean
 ) {
   if (!address) return;
+  const addressLower = address.toLowerCase();
 
-  let ownerAssets = await context.OwnerAssets.get(address);
+  let ownerAssets = await context.OwnerAssets.get(addressLower);
   if (!ownerAssets) {
     ownerAssets = {
-      id: address,
-      address: address,
+      id: addressLower,
+      address: addressLower,
       badges: [],
       polBadges: [],
       baseBadges: [],
@@ -107,7 +108,7 @@ async function importKudosBadges(context: any) {
   console.log('Importing kudos badges...');
   for (const [address, badges] of Object.entries(kudosBadges)) {
     for (const badgeId of badges as number[]) {
-      await updateOwnerAssets(context, address.toLowerCase(), 'kudosBadges', BigInt(badgeId), true);
+      await updateOwnerAssets(context, address, 'kudosBadges', BigInt(badgeId), true);
     }
   }
   console.log('Kudos badges import completed');
@@ -151,7 +152,7 @@ BaseBadges.TransferSingle.handler(async ({ event, context }) => {
 const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
   // HACK: simulate init event
   if (event.block.number === 56350237) {
-    console.log('first datadisk transfer, also import kudos badges');
+    console.log('first datadisk transfer -> import kudos badges');
     await importKudosBadges(context);
   }
 
