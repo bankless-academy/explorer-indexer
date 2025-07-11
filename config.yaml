@@ -47,4 +47,6 @@ networks:
     # field_selection:
     #   transaction_fields:
     #     - "operator"
+  # rpc_config:
+  #   url: https://8453.hypersync.xyz
 rollback_on_reorg: false
