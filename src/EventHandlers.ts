@@ -150,8 +150,9 @@ BaseBadges.TransferSingle.handler(async ({ event, context }) => {
 });
 
 const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
+  // console.log('handleTransfer', event);
   // HACK: simulate init event
-  if (event.block.number === 56350237) {
+  if (event.block.number === 107093157) {
     console.log('first datadisk transfer -> import kudos badges');
     await importKudosBadges(context);
   }
