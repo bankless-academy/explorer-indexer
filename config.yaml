@@ -24,7 +24,7 @@ networks:
     - 0xd94ecc2f45d7346975f2437c789b3e2e32c397ca
     handler: src/EventHandlers.ts
     events:
-    - event: Transfer(address indexed _from, address indexed _to, uint256 _value)
+    - event: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 - id: 137
   start_block: 46586788
   contracts:

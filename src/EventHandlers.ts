@@ -49,10 +49,13 @@ async function updateOwnerAssets(
   assetId: string | BigInt,
   isAdd: boolean
 ) {
-  if (!address) return;
+  if (!address) {
+    return;
+  }
   const addressLower = address.toLowerCase();
 
   let ownerAssets = await context.OwnerAssets.get(addressLower);
+  
   if (!ownerAssets) {
     ownerAssets = {
       id: addressLower,
@@ -149,36 +152,41 @@ BaseBadges.TransferSingle.handler(async ({ event, context }) => {
   }
 });
 
-const handleTransfer = async ({ event, context }: { event: any; context: any }) => {
-  // console.log('handleTransfer', event);
+const handleDatadisksTransfer = async ({ event, context }: { event: any; context: any }) => {
+  // console.log('=== DATADISKS TRANSFER EVENT ===');
+  // console.log('Event:', {
+  //   srcAddress: event.srcAddress,
+  //   from: event.params.from,
+  //   to: event.params.to,
+  //   tokenId: event.params.tokenId,
+  //   blockNumber: event.block.number
+  // });
+  
   // HACK: simulate init event
   if (event.block.number === 107093157) {
     console.log('first datadisk transfer -> import kudos badges');
     await importKudosBadges(context);
   }
 
-  const isDatadisk = datadisksAddresses.includes(event.srcAddress);
-  const contractList = isDatadisk ? datadisksAddresses : handbooksAddresses;
-  const contractIndex = getContractIndex(event.srcAddress, contractList);
-  const assetType = isDatadisk ? 'datadisks' : 'handbooks';
+  const contractIndex = getContractIndex(event.srcAddress, datadisksAddresses);
+  const assetType = 'datadisks';
 
-  const entity = isDatadisk
-    ? {
-      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
-      from: event.params.from,
-      to: event.params.to,
-      tokenId: event.params.tokenId.toString(),
-      contractIndex: contractIndex,
-    } as Datadisks_Transfer
-    : {
-      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
-      from: event.params.from,
-      to: event.params.to,
-      value: event.params.tokenId.toString(),
-      contractIndex: contractIndex,
-    } as Handbooks_Transfer;
+  // console.log('Datadisks transfer analysis:', {
+  //   srcAddress: event.srcAddress,
+  //   assetType,
+  //   contractIndex
+  // });
 
-  await (isDatadisk ? context.Datadisks_Transfer.set(entity) : context.Handbooks_Transfer.set(entity));
+  const entity: Datadisks_Transfer = {
+    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+    from: event.params.from,
+    to: event.params.to,
+    tokenId: event.params.tokenId.toString(),
+    contractIndex: contractIndex,
+  };
+
+  await context.Datadisks_Transfer.set(entity);
+  // console.log(`Saved ${assetType} transfer entity`);
 
   if (event.params.from !== '0x0000000000000000000000000000000000000000') {
     await updateOwnerAssets(context, event.params.from, assetType, contractIndex, false);
@@ -186,5 +194,59 @@ const handleTransfer = async ({ event, context }: { event: any; context: any }) 
   await updateOwnerAssets(context, event.params.to, assetType, contractIndex, true);
 };
 
-Datadisks.Transfer.handler(handleTransfer);
-Handbooks.Transfer.handler(handleTransfer);
+const handleHandbooksTransfer = async ({ event, context }: { event: any; context: any }) => {
+  // console.log('=== HANDBOOKS TRANSFER EVENT ===');
+  // console.log('Event:', {
+  //   srcAddress: event.srcAddress,
+  //   from: event.params.from,
+  //   to: event.params.to,
+  //   tokenId: event.params.tokenId,
+  //   blockNumber: event.block.number
+  // });
+
+  const contractIndex = getContractIndex(event.srcAddress, handbooksAddresses);
+  const assetType = 'handbooks';
+
+  // console.log('=== HANDBOOKS handleTransfer DEBUG ===');
+  // console.log('Event details:', {
+  //   blockNumber: event.block.number,
+  //   srcAddress: event.srcAddress,
+  //   from: event.params.from,
+  //   to: event.params.to,
+  //   tokenId: event.params.tokenId?.toString(),
+  //   chainId: event.chainId,
+  //   logIndex: event.logIndex
+  // });
+
+  // console.log('Transfer analysis:', {
+  //   srcAddress: event.srcAddress,
+  //   contractList: handbooksAddresses.slice(0, 3) + '...', // Show first 3 addresses
+  //   contractIndex,
+  //   assetType
+  // });
+
+  const entity: Handbooks_Transfer = {
+    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+    from: event.params.from,
+    to: event.params.to,
+    value: event.params.tokenId.toString(),
+    contractIndex: contractIndex,
+  };
+
+  // console.log('Entity to save:', entity);
+  await context.Handbooks_Transfer.set(entity);
+  // console.log(`Saved ${assetType} transfer entity`);
+
+  if (event.params.from !== '0x0000000000000000000000000000000000000000') {
+    // console.log(`Updating assets for FROM address: ${event.params.from}, assetType: ${assetType}, contractIndex: ${contractIndex}, isAdd: false`);
+    await updateOwnerAssets(context, event.params.from, assetType, contractIndex, false);
+  }
+
+  // console.log(`Updating assets for TO address: ${event.params.to}, assetType: ${assetType}, contractIndex: ${contractIndex}, isAdd: true`);
+  await updateOwnerAssets(context, event.params.to, assetType, contractIndex, true);
+
+  // console.log('=== HANDBOOKS handleTransfer DEBUG END ===');
+};
+
+Datadisks.Transfer.handler(handleDatadisksTransfer);
+Handbooks.Transfer.handler(handleHandbooksTransfer);
